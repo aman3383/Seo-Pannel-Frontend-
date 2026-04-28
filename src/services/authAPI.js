@@ -45,9 +45,13 @@ authAPI.interceptors.response.use(
     }
 
     if (error.response?.status === 401) {
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('userData');
-      window.location.href = '/login';
+      const url = error.config?.url || '';
+      // Login/register returning 401 means wrong credentials — just show the error, don't redirect
+      if (!url.includes('/login') && !url.includes('/register')) {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('userData');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
