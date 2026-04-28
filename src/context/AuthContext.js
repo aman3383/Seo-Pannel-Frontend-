@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { getApiUrl } from '../config/api';
+import { authAPI } from '../services/authAPI';
 
 const AuthContext = createContext();
 
@@ -37,32 +37,24 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (credentials) => {
     try {
-      // Connect to backend server using environment configuration
-      const response = await fetch(`${getApiUrl('/auth/login')}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(credentials),
-      });
+      const response = await authAPI.post('/login', credentials);
+      const data = response.data;
 
-      if (!response.ok) {
-        throw new Error('Login failed');
-      }
-
-      const data = await response.json();
-      
-      // Store token and user data
       localStorage.setItem('authToken', data.token);
       localStorage.setItem('userData', JSON.stringify(data.user));
-      
+
       setUser(data.user);
       setIsAuthenticated(true);
-      
+
       return { success: true };
     } catch (error) {
       console.error('Login error:', error);
-      return { success: false, error: error.message };
+      const message =
+        error.response?.data?.message ||
+        (error.code === 'ECONNABORTED' || error.message === 'Network Error'
+          ? 'Server is unavailable. Please try again in a moment.'
+          : error.message || 'Login failed');
+      return { success: false, error: message };
     }
   };
 

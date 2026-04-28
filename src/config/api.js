@@ -9,12 +9,12 @@ const API_CONFIG = {
   // Environment
   NODE_ENV: process.env.REACT_APP_NODE_ENV || 'development',
   
-  // Timeout settings
-  TIMEOUT: 10000,
-  
+  // Timeout — long enough for Render free tier to wake up (up to 60 s)
+  TIMEOUT: 65000,
+
   // Retry settings
-  MAX_RETRIES: 3,
-  RETRY_DELAY: 1000,
+  MAX_RETRIES: 2,
+  RETRY_DELAY: 3000,
 };
 
 // Helper function to get full API URL

@@ -6,6 +6,7 @@ const API_URL = API_CONFIG.API_URL;
 // Create axios instance
 const api = axios.create({
   baseURL: API_URL,
+  timeout: API_CONFIG.TIMEOUT,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -36,22 +37,37 @@ api.interceptors.request.use(
   }
 );
 
-// Add response interceptor for logging and auth handling
+// Add response interceptor for logging, auth handling, and Render wake-up retry
 api.interceptors.response.use(
   (response) => {
     console.log(`API Response: ${response.status} ${response.config.url}`, response.data);
     return response;
   },
-  (error) => {
+  async (error) => {
     console.error('API Response Error:', error.response || error);
-    
+
+    const config = error.config;
+    const isNetworkOrTimeout =
+      !error.response &&
+      (error.code === 'ECONNABORTED' ||
+        error.code === 'ERR_NETWORK' ||
+        error.code === 'ETIMEDOUT' ||
+        error.message === 'Network Error');
+
+    // Retry on network/timeout errors (Render cold-start)
+    if (isNetworkOrTimeout && config && (config.__retryCount || 0) < API_CONFIG.MAX_RETRIES) {
+      config.__retryCount = (config.__retryCount || 0) + 1;
+      await new Promise((resolve) => setTimeout(resolve, API_CONFIG.RETRY_DELAY));
+      return api(config);
+    }
+
     // Handle 401 Unauthorized errors
     if (error.response?.status === 401) {
       localStorage.removeItem('authToken');
       localStorage.removeItem('userData');
       window.location.href = '/login';
     }
-    
+
     return Promise.reject(error);
   }
 );

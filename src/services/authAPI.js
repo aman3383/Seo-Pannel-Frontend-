@@ -6,6 +6,7 @@ const API_BASE_URL = API_CONFIG.API_URL;
 // Create axios instance with base configuration
 const authAPI = axios.create({
   baseURL: `${API_BASE_URL}/auth`,
+  timeout: API_CONFIG.TIMEOUT,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -25,10 +26,24 @@ authAPI.interceptors.request.use(
   }
 );
 
-// Handle token expiration
+// Handle token expiration and Render cold-start retries
 authAPI.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
+    const config = error.config;
+    const isNetworkOrTimeout =
+      !error.response &&
+      (error.code === 'ECONNABORTED' ||
+        error.code === 'ERR_NETWORK' ||
+        error.code === 'ETIMEDOUT' ||
+        error.message === 'Network Error');
+
+    if (isNetworkOrTimeout && config && (config.__retryCount || 0) < API_CONFIG.MAX_RETRIES) {
+      config.__retryCount = (config.__retryCount || 0) + 1;
+      await new Promise((resolve) => setTimeout(resolve, API_CONFIG.RETRY_DELAY));
+      return authAPI(config);
+    }
+
     if (error.response?.status === 401) {
       localStorage.removeItem('authToken');
       localStorage.removeItem('userData');
