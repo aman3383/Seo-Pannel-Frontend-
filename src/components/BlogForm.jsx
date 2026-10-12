@@ -6,6 +6,10 @@ import 'react-quill/dist/quill.snow.css';
 import SEOForm from './SEOForm';
 import { getBackendUrl } from '../config/api';
 
+// Older blogs store a relative /uploads path; new ones store a full URL
+const resolveImageUrl = (image) =>
+  image ? (image.startsWith('/') ? `${getBackendUrl()}${image}` : image) : null;
+
 // Register custom size style with Quill BEFORE any React imports
 const SizeStyle = Quill.import('attributors/style/size');
 const fontSizes = ['small', 'normal', 'large', 'huge'];
@@ -16,7 +20,7 @@ const BlogForm = ({ initialData, onSubmit, isLoading }) => {
   const [activeTab, setActiveTab] = useState('content');
   const [content, setContent] = useState(initialData?.content || '');
   const [imagePreview, setImagePreview] = useState(
-    initialData?.image ? `${getBackendUrl()}${initialData.image}` : null
+    resolveImageUrl(initialData?.image)
   );
   
   const { register, handleSubmit, formState: { errors }, watch } = useForm({
@@ -38,7 +42,7 @@ const BlogForm = ({ initialData, onSubmit, isLoading }) => {
       };
       reader.readAsDataURL(file);
     } else {
-      setImagePreview(initialData?.image ? `${getBackendUrl()}${initialData.image}` : null);
+      setImagePreview(resolveImageUrl(initialData?.image));
     }
   };
 
